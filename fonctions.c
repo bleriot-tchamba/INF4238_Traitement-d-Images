@@ -76,7 +76,6 @@ int **construire_tab_bin(FILE *fichier)
                 {
                     if (valChar == '\n')
                     {
-
                         j = j - 1;
                         i = aide;
                     }
@@ -700,8 +699,120 @@ int **convolution(int **image, int nblig, int nbcol)
                 fc = 0;
             }
 
-            imageT[tl][tc] = sum ;// sumf;
+            imageT[tl][tc] = sum / sumf;
             tc = tc + 1;
+        }
+        tl = tl + 1;
+        tc = 0;
+    }
+
+    return imageT;
+}
+
+
+int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int info)
+{
+    int filtre[3][3]; 
+    // Construction du filtre
+    if( info== 1)
+    {
+        filtre[0][0] = -1; filtre[0][1] = -1; filtre[0][2] = -1;
+        filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
+        filtre[2][0] = 1; filtre[2][1] = 1; filtre[2][2] = 1;
+    }
+    else if(info == 2)
+    {
+       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
+       filtre[1][0] = -1; filtre[1][1] = 0; filtre[1][2] = 1;
+       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+    }
+    else if(info == 3)
+    {
+       filtre[0][0] = -1; filtre[0][1] = -2; filtre[0][2] = -1;
+       filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
+       filtre[2][0] = 1; filtre[2][1] = 2; filtre[2][2] = 1; 
+    }
+    else if(info == 4)
+    {
+       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
+       filtre[1][0] = -2; filtre[1][1] = 0; filtre[1][2] = 2;
+       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+    }
+    
+    // Creation du tableau qui sera retourné
+    int **imageT = NULL;
+    imageT = malloc(nblig * sizeof(int *));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageT[i] = malloc(nbcol * sizeof(int));
+    }
+
+    int tmp, lig_trans, col_trans, sum = 0, fl = 0, fc = 0, tl = 0, tc = 0, sumf = 0;
+
+    // Creation d'une matrice intermédiaire
+    tmp = 3/2;
+    lig_trans = nblig + (tmp * 2);
+    col_trans = nbcol + (tmp * 2);
+
+    int tab_trans[lig_trans][col_trans];
+    for (int i = 0; i < lig_trans; i++)
+    {
+        for (int j = 0; j < col_trans; j++)
+        {
+            if (i < tmp || i >= tmp + nblig || j < tmp || j >= tmp + nbcol)
+            {
+                tab_trans[i][j] = 300;
+            }
+            else
+            {
+                tab_trans[i][j] = image[i - tmp][j - tmp];
+            }
+        }
+    }
+
+    // Convolution proprement dite
+    for (int i = tmp; i < tmp + nblig; i++)
+    {
+        for (int j = tmp; j < tmp + nbcol; j++)
+        {
+            int k = i - tmp;
+            int l = j - tmp;
+            sum = 0;
+            sumf = 0;
+            fl = 0;
+            fc = 0;
+
+            for (int li = k; li < k + 3; li++)
+            {
+                for (int co = l; co < l + 3; co++)
+                {
+                    if (tab_trans[li][co] != 300)
+                    {
+                        sum = sum + (tab_trans[li][co] * filtre[fl][fc]);
+                        sumf = sumf + filtre[fl][fc];
+                    }
+
+                    fc = fc + 1;
+                }
+                fl = fl + 1;
+                fc = 0;
+            }
+            if(sum<0)
+            {
+                imageT[tl][tc] = sum * -1;
+                tc = tc + 1;
+            }
+            else if(sum>255)
+            {
+                imageT[tl][tc] = 255;
+                tc = tc + 1;
+            }
+            else
+            {
+                imageT[tl][tc] = sum ;
+                tc = tc + 1;
+            }
+            
         }
         tl = tl + 1;
         tc = 0;

@@ -36,11 +36,11 @@ int main()
    
 
     // premiere image : sa matrice
-    fichier = fopen("came.txt", "r");
+    fichier = fopen("cam.txt", "r");
     image = construire_tab(fichier);
 
     // premiere image : ses dimensions
-    fichier = fopen("came.txt", "r");
+    fichier = fopen("cam.txt", "r");
     taillImg = dimImg(fichier);
 
     // deuxieme image : sa matrice
@@ -89,13 +89,14 @@ int main()
     image_Interp = zoomm(image, taillImg[0], taillImg[1],zoom);
     makefile(image_Interp, taillImg[0]*zoom, taillImg[1]*zoom);*/
 
-    //imageConv = convolution(image, taillImg[0],taillImg[1]);
-    //makefile(imageConv, taillImg[0], taillImg[1]);
+    /*imageConv = contour_prewitt(image, taillImg[0],taillImg[1]);
+    makefile(imageConv, taillImg[0], taillImg[1]);*/
 
-    imageConv = convolution(image, taillImg[0],taillImg[1]);
-    imageConv2 = convolution(image, taillImg[0],taillImg[1]);
+    imageConv = contour_prewitt_sobel_isotropic(image, taillImg[0],taillImg[1],3);
+    imageConv2 = contour_prewitt_sobel_isotropic(image, taillImg[0],taillImg[1],4);
     add = addition(imageConv, imageConv2, taillImg, taillImg);
     makefile2(add, taillImg, taillImg);
+    //makefile(imageConv, taillImg[0], taillImg[1]);
 
     return 0;
 }

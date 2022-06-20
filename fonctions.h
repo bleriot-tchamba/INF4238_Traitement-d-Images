@@ -28,7 +28,8 @@ void makefile2(int **matrice, int *dim1, int *dim2);
 int min_img(int **matrice, int nblig, int nbcol);
 int max_img(int **matrice, int nblig, int nbcol);
 int est_binaire(int **matrice , int nblig, int nbcol);
-int **convolution(int **image, int nblig, int nbcol);
+int **convolution(int **image, int nblig, int nbcol); 
+int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int info);
 int **filtreMedian(int **image, int nblig, int nbcol);
 int mediane(int *tab, int taille);
 
