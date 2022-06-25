@@ -116,6 +116,14 @@ int *dimImg(FILE *fichier)
     return tab;
 }
 
+/*struct Tuple3
+{
+    int **image;
+    int nblig;
+    int nbcol;
+};
+typedef struct Tuple3 Tuple3;*/
+
 int *histogramme(int **image, int nb_lig, int nb_col)
 {
     // int h[256] = {0},i,j;
@@ -130,11 +138,47 @@ int *histogramme(int **image, int nb_lig, int nb_col)
             h[a]++;
         }
     }
-    /*for(int i=0;i<=255;i++)
-    {
-        printf("Pixel %d : %d occurences \n",i,h[i]);
-    }*/
+    
     return h;
+}
+
+Tuple3 affichageHistogramme(int **image, int nblig, int nbcol)
+{
+    int *hist = NULL;
+    int max = 0;
+    hist = histogramme(image,nblig,nbcol);
+    //Max de l'histogramme
+    for(int i=0;i<256;i++)
+    {
+        if(hist[i]>max)
+        {
+            max = hist[i];
+        }
+    }
+    
+    //Creation et initialisation à 0 de la matrice de retour
+    int **imageT = NULL;
+    imageT = malloc((max+100) * sizeof(int *)); //(max+100) le 100 permet de laisser un peu d'espace en dessous de l'histogramme
+    for(int i=0;i<(max+100);i++)
+    {
+        imageT[i] = malloc(1020 * sizeof(int)); //1020 ici pour 255*4 pourque l'histogramme soit plus epais et plus beau par conséquent
+        for(int j=0;j<1020;j++)
+        {
+            imageT[i][j] = 0;
+        }
+    }
+
+    //Construction de l'histogramme
+    for(int i=0;i<1020;i++)
+    {
+        for(int j=max-1; j>max-1-hist[i/4]; j--)
+        {
+            imageT[j][i] = 255;
+        }
+    }
+    Tuple3 t = {imageT, (max+100), 1020};
+
+    return t;
 }
 
 int mean_img(int **image, int nblig, int nbcol)
@@ -236,10 +280,11 @@ int max(int a, int b)
     return res;
 }
 
-void makefile(int **matrice, int nblig, int nbcol)
+void makefile(int **matrice, int nblig, int nbcol, int argc, char **argv)
 {
     FILE *fichier = NULL;
-    fichier = fopen("imageTrans.txt", "w");
+    //fichier = fopen("imageTrans.pgm", "w");
+    fichier = fopen(argv[argc-1], "w");
     int tailleMax = 255;
     if (fichier != NULL)
     {
@@ -264,12 +309,12 @@ void makefile(int **matrice, int nblig, int nbcol)
     }
 }
 
-void makefile2(int **matrice, int *dim1, int *dim2)
+void makefile2(int **matrice, int *dim1, int *dim2, int argc, char **argv)
 {
     int nblig = min(dim1[0], dim2[0]);
     int nbcol = min(dim1[1], dim2[1]);
     FILE *fichier = NULL;
-    fichier = fopen("imageTrans.txt", "w");
+    fichier = fopen(argv[argc-1], "w");
     int tailleMax = 255;
     if (fichier != NULL)
     {
@@ -433,6 +478,7 @@ int **egalisation(int **image, int *hist, int nblig, int nbcol)
     }
     return imageT;
 }
+
 
 int **addition(int **image1, int **image2, int *dim1, int *dim2)
 {
@@ -607,36 +653,20 @@ int **zoomm(int **image, int nblig, int nbcol, int zoom)
 int **convolution(int **image, int nblig, int nbcol)
 {
     // Construction du filtre
-    int val, nbLigFil, nbColFil;
-    printf("Entrer le nombre de lignes de votre filtre : ");
+    int val, nbLigFil;
+    printf("Entrer la taille de votre filtre (nombre de lignes) : ");
     scanf("%d", &nbLigFil);
-    printf("Entrer le nombre de colonnes de votre filtre : ");
-    scanf("%d", &nbColFil);
-    int filtre[nbLigFil][nbColFil], info = 0;
+    
+    int filtre[nbLigFil][nbLigFil];
 
-    printf("Type de filtre à appliquer : 1 pour moyenneur, 2 pour gaussien et 3 pour autre :");
-    scanf("%d", &info);
-    if (info == 1)
+    printf("Entrer les valeurs du filtre\n");
+    for (int i = 0; i < nbLigFil; i++)
     {
-        for (int i = 0; i < nbLigFil; i++)
+        printf("Entrer les valeurs de la ligne %d séparées un espace : ", i + 1);
+        for (int j = 0; j < nbLigFil; j++)
         {
-            for (int j = 0; j < nbColFil; j++)
-            {
-                filtre[i][j] = 1;
-            }
-        }
-    }
-    else if (info == 2 || info == 3)
-    {
-        printf("Entrer les valeurs du filtre\n");
-        for (int i = 0; i < nbLigFil; i++)
-        {
-            printf("Entrer les valeurs de la ligne %d séparées un espace : ", i + 1);
-            for (int j = 0; j < nbColFil; j++)
-            {
-                scanf("%d", &val);
-                filtre[i][j] = val;
-            }
+            scanf("%d", &val);
+            filtre[i][j] = val;
         }
     }
 
@@ -709,34 +739,46 @@ int **convolution(int **image, int nblig, int nbcol)
     return imageT;
 }
 
-
-int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int info)
+int **filtreMoyenneurGaussien(int **image, int nblig, int nbcol,  char info)
 {
-    int filtre[3][3]; 
     // Construction du filtre
-    if( info== 1)
+    int val, nbLigFil;
+    printf("Entrer le nombre de lignes de votre filtre : ");
+    scanf("%d", &nbLigFil);
+    
+    int filtre[nbLigFil][nbLigFil];
+
+    if (info == 'M')
     {
-        filtre[0][0] = -1; filtre[0][1] = -1; filtre[0][2] = -1;
-        filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
-        filtre[2][0] = 1; filtre[2][1] = 1; filtre[2][2] = 1;
+        for (int i = 0; i < nbLigFil; i++)
+        {
+            for (int j = 0; j < nbLigFil; j++)
+            {
+                filtre[i][j] = 1;
+            }
+        }
     }
-    else if(info == 2)
+    else if (info == 'G')
     {
-       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
-       filtre[1][0] = -1; filtre[1][1] = 0; filtre[1][2] = 1;
-       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+        filtre[0][0] = 1; filtre[0][1] = 2; filtre[0][2] = 3; filtre[0][3] = 2; filtre[0][4] = 1;
+        filtre[1][0] = 2; filtre[1][1] = 6; filtre[1][2] = 8; filtre[1][3] = 6; filtre[1][4] = 2;
+        filtre[2][0] = 3; filtre[2][1] = 8; filtre[2][2] = 10; filtre[2][3] = 8; filtre[2][4] = 3;
+        filtre[3][0] = 2; filtre[3][1] = 6; filtre[3][2] = 8; filtre[3][3] = 6; filtre[3][4] = 2;
+        filtre[4][0] = 1; filtre[4][1] = 2; filtre[4][2] = 3; filtre[4][3] = 2; filtre[4][4] = 1;
     }
-    else if(info == 3)
+    else if (info == 'A')
     {
-       filtre[0][0] = -1; filtre[0][1] = -2; filtre[0][2] = -1;
-       filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
-       filtre[2][0] = 1; filtre[2][1] = 2; filtre[2][2] = 1; 
-    }
-    else if(info == 4)
-    {
-       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
-       filtre[1][0] = -2; filtre[1][1] = 0; filtre[1][2] = 2;
-       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+        printf("Entrer les valeurs du filtre\n");
+        for (int i = 0; i < nbLigFil; i++)
+        {
+            printf("Entrer les valeurs de la ligne %d séparées un espace : ", i + 1);
+            for (int j = 0; j < nbLigFil; j++)
+            {
+                scanf("%d", &val);
+                filtre[i][j] = val;
+            }
+        }
+        
     }
     
     // Creation du tableau qui sera retourné
@@ -750,7 +792,7 @@ int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int inf
     int tmp, lig_trans, col_trans, sum = 0, fl = 0, fc = 0, tl = 0, tc = 0, sumf = 0;
 
     // Creation d'une matrice intermédiaire
-    tmp = 3/2;
+    tmp = nbLigFil / 2;
     lig_trans = nblig + (tmp * 2);
     col_trans = nbcol + (tmp * 2);
 
@@ -782,9 +824,121 @@ int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int inf
             fl = 0;
             fc = 0;
 
-            for (int li = k; li < k + 3; li++)
+            for (int li = k; li < k + nbLigFil; li++)
             {
-                for (int co = l; co < l + 3; co++)
+                for (int co = l; co < l + nbLigFil; co++)
+                {
+                    if (tab_trans[li][co] != 300)
+                    {
+                        sum = sum + (tab_trans[li][co] * filtre[fl][fc]);
+                        sumf = sumf + filtre[fl][fc];
+                    }
+
+                    fc = fc + 1;
+                }
+                fl = fl + 1;
+                fc = 0;
+            }
+
+            imageT[tl][tc] = sum / sumf;
+            tc = tc + 1;
+        }
+        tl = tl + 1;
+        tc = 0;
+    }
+
+    return imageT;
+}
+
+
+int **contour_prewitt_sobel(int **image, int nblig, int nbcol, int info)
+{
+    int filtre[3][3]; 
+    int tailleFiltre = 3;
+    // Construction du filtre
+    if( info== 1)
+    {
+        filtre[0][0] = -1; filtre[0][1] = -1; filtre[0][2] = -1;
+        filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
+        filtre[2][0] = 1; filtre[2][1] = 1; filtre[2][2] = 1;
+    }
+    else if(info == 2)
+    {
+       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
+       filtre[1][0] = -1; filtre[1][1] = 0; filtre[1][2] = 1;
+       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+    }
+    else if(info == 3)
+    {
+       filtre[0][0] = -1; filtre[0][1] = -2; filtre[0][2] = -1;
+       filtre[1][0] = 0; filtre[1][1] = 0; filtre[1][2] = 0;
+       filtre[2][0] = 1; filtre[2][1] = 2; filtre[2][2] = 1; 
+    }
+    else if(info == 4)
+    {
+       filtre[0][0] = -1; filtre[0][1] = 0; filtre[0][2] = 1;
+       filtre[1][0] = -2; filtre[1][1] = 0; filtre[1][2] = 2;
+       filtre[2][0] = -1; filtre[2][1] = 0; filtre[2][2] = 1; 
+    }
+    else if(info == 5)
+    {
+       filtre[0][0] = 0; filtre[0][1] = 1; filtre[0][2] = 0;
+       filtre[1][0] = 1; filtre[1][1] = -4; filtre[1][2] = 1;
+       filtre[2][0] = 0; filtre[2][1] = 1; filtre[2][2] = 0; 
+    }
+    else if(info == 6)
+    {
+       filtre[0][0] = 1; filtre[0][1] = 1; filtre[0][2] = 1;
+       filtre[1][0] = 1; filtre[1][1] = -8; filtre[1][2] = 1;
+       filtre[2][0] = 1; filtre[2][1] = 1; filtre[2][2] = 1; 
+    }
+   
+    // Creation du tableau qui sera retourné
+    int **imageT = NULL;
+    imageT = malloc(nblig * sizeof(int *));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageT[i] = malloc(nbcol * sizeof(int));
+    }
+
+    int tmp, lig_trans, col_trans, sum = 0, fl = 0, fc = 0, tl = 0, tc = 0, sumf = 0;
+
+    // Creation d'une matrice intermédiaire
+    tmp = tailleFiltre/2;
+    lig_trans = nblig + (tmp * 2);
+    col_trans = nbcol + (tmp * 2);
+
+    int tab_trans[lig_trans][col_trans];
+    for (int i = 0; i < lig_trans; i++)
+    {
+        for (int j = 0; j < col_trans; j++)
+        {
+            if (i < tmp || i >= tmp + nblig || j < tmp || j >= tmp + nbcol)
+            {
+                tab_trans[i][j] = 300;
+            }
+            else
+            {
+                tab_trans[i][j] = image[i - tmp][j - tmp];
+            }
+        }
+    }
+
+    // Convolution proprement dite
+    for (int i = tmp; i < tmp + nblig; i++)
+    {
+        for (int j = tmp; j < tmp + nbcol; j++)
+        {
+            int k = i - tmp;
+            int l = j - tmp;
+            sum = 0;
+            sumf = 0;
+            fl = 0;
+            fc = 0;
+
+            for (int li = k; li < k + tailleFiltre; li++)
+            {
+                for (int co = l; co < l + tailleFiltre; co++)
                 {
                     if (tab_trans[li][co] != 300)
                     {
@@ -812,12 +966,109 @@ int **contour_prewitt_sobel_isotropic(int **image, int nblig, int nbcol, int inf
                 imageT[tl][tc] = sum ;
                 tc = tc + 1;
             }
-            
         }
         tl = tl + 1;
         tc = 0;
+
+    }
+    return imageT;
+}
+
+
+int **robert(int **image, int nblig, int nbcol, int info)
+{
+    int filtre[2][2]; 
+    int tailFiltre = 2;
+    // Construction du filtre
+    if( info== 1)
+    {
+        filtre[0][0] = 1; filtre[0][1] = 0; 
+        filtre[1][0] = 0; filtre[1][1] = -1; 
+    }
+    else if(info == 2)
+    {
+       filtre[0][0] = 0; filtre[0][1] = 1; 
+       filtre[1][0] = -1; filtre[1][1] = 0; 
+    }
+    
+    // Creation du tableau qui sera retourné
+    int **imageT = NULL;
+    imageT = malloc(nblig * sizeof(int *));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageT[i] = malloc(nbcol * sizeof(int));
     }
 
+    int tmp, lig_trans, col_trans, sum = 0, fl = 0, fc = 0, tl = 0, tc = 0, sumf = 0;
+
+    // Creation d'une matrice intermédiaire
+    tmp = tailFiltre/2;
+    lig_trans = nblig + (tmp * 2);
+    col_trans = nbcol + (tmp * 2);
+
+    int tab_trans[lig_trans][col_trans];
+    for (int i = 0; i < lig_trans; i++)
+    {
+        for (int j = 0; j < col_trans; j++)
+        {
+            if (i < tmp || i >= tmp + nblig || j < tmp || j >= tmp + nbcol)
+            {
+                tab_trans[i][j] = 300;
+            }
+            else
+            {
+                tab_trans[i][j] = image[i - tmp][j - tmp];
+            }
+        }
+    }
+
+    // Convolution proprement dite
+    for (int i = tmp; i < tmp + nblig; i++)
+    {
+        for (int j = tmp; j < tmp + nbcol; j++)
+        {
+            int k = i - tmp;
+            int l = j - tmp;
+            sum = 0;
+            sumf = 0;
+            fl = 0;
+            fc = 0;
+
+            for (int li = k; li < k + tailFiltre; li++)
+            {
+                for (int co = l; co < l + tailFiltre; co++)
+                {
+                    if (tab_trans[li][co] != 300)
+                    {
+                        sum = sum + (tab_trans[li][co] * filtre[fl][fc]);
+                        sumf = sumf + filtre[fl][fc];
+                    }
+
+                    fc = fc + 1;
+                }
+                fl = fl + 1;
+                fc = 0;
+            }
+            if(sum<0)
+            {
+                imageT[tl][tc] = sum * -1;
+                tc = tc + 1;
+            }
+            else if(sum>255)
+            {
+                imageT[tl][tc] = 255;
+                tc = tc + 1;
+            }
+            else
+            {
+                imageT[tl][tc] = sum ;
+                tc = tc + 1;
+            }
+        }
+        tl = tl + 1;
+        tc = 0;
+        
+    }
     return imageT;
 }
 
@@ -946,4 +1197,305 @@ int mediane(int *tab, int taille)
     }
 
     return med;
+}
+
+/*int Otsu2(int **image, int nblig, int nbcol)
+{
+    float moy1 = 0, moy2=0, var1 = 0, var2=0, P1 = 0, P2 = 0, varIntra=0, varIntraActuel = 1000, seuil = 0;
+    int *hist = NULL, **imageT = NULL, T;
+    float *histo = NULL;
+    hist = histogramme(image,nblig,nbcol);
+    histo = egalisation2(image, hist, nblig, nbcol);
+    //histo = histogramme(imageT,nblig,nbcol);
+
+    //Pour chaque seuil
+    for(T=1;T<256;T++)
+    {
+        //Calcul des moyennes et des P
+        for(int i=0;i<T;i++)
+        {
+            moy1 = moy1 + histo[i];
+        }
+        moy1 = moy1/T;
+        P1 = moy1/(nblig * nbcol);
+
+        for(int i=T;i<256;i++)
+        {
+            moy2 = moy2 + histo[i];
+        }
+        moy2 = moy2/(256-T);
+        P2 = moy2/(nblig * nbcol);
+
+        //Calcul des variances
+        for(int i=0;i<T;i++)
+        {
+            var1 = var1 + ( (histo[i] - moy1) * (histo[i] - moy1) );
+        }
+        var1 = var1/T;
+
+        for(int i=T;i<256;i++)
+        {
+            var2 = var2 + ( (histo[i] - moy2) * (histo[i] - moy2) );
+        }
+        var2 = var2/(256-T);
+
+        //Calcul de la variance intraclasse
+        varIntra = (P1 * var1) + (P2 * var2);
+        printf("Pour le seuil %d : variance intraClasse est %f\n", T, varIntra);
+        if(varIntra <= varIntraActuel)
+        {
+            varIntraActuel = varIntra;
+            seuil = T;
+        }
+
+        moy1 = 0; moy2 = 0; var1 = 0; var2 = 0; P1 = 0; P2 = 0;
+    }
+    return seuil;
+}*/
+
+
+int Otsu(int **image, int nblig, int nbcol)
+{
+    float moy1 = 0, moy2=0, W1 = 0, W2 = 0, varInter=0, varInterActuel = 0, seuil = 0;
+    int T;
+    int *histo = NULL;
+    int **imgEgal = NULL;
+    histo = histogramme(image,nblig,nbcol);
+   
+    int taille = nblig * nbcol;
+    //Pour chaque seuil
+    for(T=1;T<256;T++)
+    {
+        //Calcul des W et des moyennes
+            // Pour le cluster 1:
+        for(int i=0;i<T;i++)
+        {
+            W1 = W1 + histo[i];
+        }
+        W1 = W1/(taille);
+        
+        for(int i=0;i<T;i++)
+        {
+            moy1 = moy1 +(i * histo[i]);
+        }
+        if(moy1 == 0 && W1 == 0)
+        {
+            moy1 = 0;
+        }
+        else 
+        {
+            moy1 = moy1/(W1 * taille);
+        }   
+        
+            // Pour le cluster 2:
+        for(int i=T;i<256;i++)
+        {
+            W2 = W2 + histo[i];
+        }
+        W2 = W2/(taille);
+        
+        for(int i=T;i<256;i++)
+        {
+            moy2 = moy2 +(i * histo[i]);
+        }
+        if(moy2 == 0 && W2 == 0)
+        {
+            moy2 = 0;
+        }
+        else
+        {
+            moy2 = moy2/(W2 * taille);
+        }
+            
+        //Calcul de la variance interclasse
+        varInter = (W1 * W2) * ( (moy1 - moy2) * (moy1 - moy2) );
+        if(varInter >= varInterActuel)
+        {
+            varInterActuel = varInter;
+            seuil = T;
+        }
+
+        moy1 = 0; moy2 = 0; W1 = 0; W2 = 0;
+    }
+    return seuil;
+}
+
+int **binarisationOtsu(int **image, int nblig, int nbcol)
+{
+    int **imageTF = NULL;
+    imageTF = malloc(nblig * sizeof(int *));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageTF[i] = malloc(nbcol * sizeof(int));
+    }
+
+    int seuil = Otsu(image, nblig, nbcol);
+    printf("%d\n",seuil);
+    for(int i=0;i<nblig;i++)
+    {
+        for(int j=0; j<nbcol;j++)
+        {
+            if(image[i][j] < seuil)
+            {
+                imageTF[i][j] = 0;
+            }
+            else if(image[i][j] >= seuil)
+            {
+                imageTF[i][j] = 255;
+            }
+        }
+    }
+    return imageTF;
+}
+
+//Fonction qui seuille l'image resultante de la detection des contours 
+int **binarisation(int **image, int nblig, int nbcol)
+{
+    int seuil;
+    printf("Entrer le seuil : ");
+    scanf("%d",&seuil);
+    int **imageTF = NULL;
+    imageTF = malloc(nblig * sizeof(int *));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageTF[i] = malloc(nbcol * sizeof(int));
+    }
+
+    for(int i=0;i<nblig;i++)
+    {
+        for(int j=0; j<nbcol;j++)
+        {
+            if(image[i][j] < seuil)
+            {
+                imageTF[i][j] = 0;
+            }
+            else if(image[i][j] >= seuil)
+            {
+                imageTF[i][j] = 255;
+            }
+        }
+    }
+    return imageTF;
+}
+
+struct Tuple
+{
+    int valPixel;
+    int centre;
+};
+typedef struct Tuple Tuple;
+int valeurAbso(int nbre)
+{
+    if(nbre<0)
+    {
+        nbre = nbre * -1;
+    }
+    return nbre;
+}
+
+int findCluster(float *tabCentre, int k, int pixel )
+{
+    float courant=256, val;
+    int cluster;
+    for(int i=0; i<k; i++)
+    {
+        val = valeurAbso(pixel - tabCentre[i]);
+        if(val < courant)
+        {
+            courant = val;
+            cluster = i+1;
+        }
+
+    }
+    return cluster;
+}
+
+int **kMeans(int **image, int nblig, int nbcol)
+{
+    //Matrice de tuples
+    Tuple **imageF = NULL;
+    imageF = malloc(nblig * sizeof(Tuple*));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageF[i] = malloc(nbcol * sizeof(Tuple));
+    }
+    
+    //Image qui sera retournée
+    int **imageT = NULL;
+    imageT = malloc(nblig * sizeof(int*));
+    for (int i = 0; i < nblig; i++)
+    {
+        imageT[i] = malloc(nbcol * sizeof(int));
+    }
+
+    int k, cluster;
+    float *tabCentre = malloc(k * sizeof(float)), valMax = 255;
+    printf("Entrer le nombre de groupes à former : ");
+    scanf("%d",&k);
+    //Choix des centres initiaux
+    for(int i=1;i<=k;i++)
+    {
+        tabCentre[i-1] = (valMax/k) * i; 
+    }
+    int continuer = 1;
+
+    while(continuer == 1)
+    {
+        //Affectation des pixels aux centres dont ils sont le plus proche
+        for(int i=0;i<nblig;i++)
+        {
+            for(int j=0;j<nbcol;j++)
+            {
+                cluster = findCluster(tabCentre, k, image[i][j]);
+                Tuple t = {image[i][j], cluster};
+                imageF[i][j] = t;
+            }
+        }
+
+        //Conservation des centres de l'itération précédente
+        float *tabCentre2 = malloc(k * sizeof(float));
+        for(int i=0;i<k;i++)
+        {
+            tabCentre2[i] = tabCentre[i];
+        } 
+
+        //Mise à jour des centres
+        float sum=0; int cpt = 0;
+        for(int l=0;l<k;l++)
+        {
+            sum = 0; cpt = 0;
+            for(int i=0;i<nblig;i++)
+            {
+                for(int j=0;j<nbcol;j++)
+                {
+                    if(imageF[i][j].centre == l+1)
+                    {
+                        sum = sum+ imageF[i][j].valPixel;
+                        cpt++;
+                    }
+                }
+            }
+            tabCentre[l] = sum/cpt;
+        }
+        continuer = 0;
+
+        for(int i=0; i<k;i++)
+        {
+            if(tabCentre2[i] != tabCentre[i])
+            {
+                continuer = 1;
+            }
+        }
+    }
+
+    //construction de l'image finale
+    for(int i=0; i<nblig;i++)
+    {
+        for(int j=0; j<nbcol;j++)
+        {
+            int ind = imageF[i][j].centre;
+            imageT[i][j] = tabCentre[ind-1];
+        }
+    }
+    return imageT;
 }
