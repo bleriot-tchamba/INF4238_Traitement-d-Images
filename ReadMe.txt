@@ -136,4 +136,4 @@ Pour le faire, j'utilise quelques images se trouvant dans le dosiier images.
  
  Après chacunes de ces commandes, recuperer l'image resultante dans le dossier imagesRes.
  
- -----------------------------------------------------------FIN--------------------------------------------------------------------------------
+ -----------------------------------------------------------FIN-----------------------------------------------------
